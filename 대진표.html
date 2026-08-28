@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>팀 대항 모둠 게임 대진표</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; background: #f0f4f8; color: #222; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 44px; margin-bottom: 24px; text-align: center; }
+  h2 { font-size: 34px; margin: 20px 0 16px; text-align: center; }
+  .card { background: #fff; border-radius: 12px; padding: 28px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 24px; }
+  label { font-size: 28px; font-weight: 600; display: block; margin-bottom: 6px; }
+  .row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; justify-content: center; }
+  .field { display: flex; flex-direction: column; }
+  input[type=number] { width: 140px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 30px; }
+  select { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 30px; background: #fff; }
+  button { padding: 14px 26px; border: none; border-radius: 8px; background: #2563eb; color: #fff; font-size: 30px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  .info-btn { background: #e5e7eb; color: #374151; border-radius: 50%; width: 40px; height: 40px; padding: 0; font-size: 26px; font-weight: 700; vertical-align: middle; margin-left: 6px; }
+  .info-btn:hover { background: #d1d5db; }
+  .info-box { display: none; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px 20px; font-size: 27px; line-height: 1.6; margin-top: 14px; }
+  .info-box.show { display: block; }
+  .round { margin-bottom: 26px; }
+  .round-title { font-size: 30px; font-weight: 700; margin-bottom: 10px; color: #1e40af; text-align: center; }
+  .groups { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .group { background: #f8fafc; border: 1px solid #dbe2ea; border-radius: 10px; padding: 14px 16px; min-width: 200px; }
+  .group-name { font-size: 24px; color: #64748b; margin-bottom: 8px; text-align: center; }
+  .member { display: block; width: 100%; text-align: center; background: #fff; color: #222; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px; font-size: 28px; font-weight: 500; }
+  .member:hover { background: #eff6ff; }
+  .member.winner { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .hint { font-size: 25px; color: #64748b; margin-bottom: 14px; text-align: center; }
+  table { border-collapse: collapse; width: 100%; max-width: 640px; margin: 0 auto; }
+  th, td { border: 1px solid #dbe2ea; padding: 10px 18px; text-align: center; font-size: 28px; }
+  th { background: #f1f5f9; }
+  tr.leader td { background: #fef9c3; font-weight: 700; }
+  .hidden { display: none; }
+  .name-teams { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
+  .name-team { background: #f8fafc; border: 1px solid #dbe2ea; border-radius: 10px; padding: 14px 18px; }
+  .name-team-title { font-weight: 700; font-size: 28px; margin-bottom: 10px; color: #1e40af; text-align: center; }
+  .name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .name-row span { font-size: 26px; font-weight: 600; width: 60px; color: #475569; }
+  .name-row input { width: 180px; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 27px; }
+</style>
+</head>
+<body>
+
+<h1>🏆 팀 대항 모둠 게임 대진표</h1>
+
+<!-- 1. 설정 -->
+<div class="card">
+  <h2>설정</h2>
+  <div class="row">
+    <div class="field">
+      <label>팀 수</label>
+      <input type="number" id="teamCount" min="2" max="10" value="3">
+    </div>
+    <div class="field">
+      <label>팀당 인원</label>
+      <input type="number" id="memberCount" min="2" max="10" value="4">
+    </div>
+    <div class="field">
+      <label>모둠 인원
+        <button type="button" class="info-btn" onclick="toggleInfo()" title="모둠 배정 방식">?</button>
+      </label>
+      <input type="number" id="groupSize" min="2" value="3">
+    </div>
+    <div class="field">
+      <label>라운드 수</label>
+      <input type="number" id="roundCount" min="1" value="1">
+    </div>
+    <div class="field">
+      <label>배정 방식</label>
+      <select id="assignMode">
+        <option value="seq">차례대로</option>
+        <option value="random">무작위</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>승자 점수</label>
+      <input type="number" id="winScore" min="1" value="1">
+    </div>
+    <button onclick="generate()">대진표 생성</button>
+  </div>
+  <div class="info-box" id="infoBox">
+    <b>모둠 배정 방식</b><br>
+    · 총 인원(팀 수 × 팀당 인원)을 모둠 인원씩 나눠 모둠을 만듭니다.<br>
+    · 총 인원이 딱 나눠떨어지지 않으면 <b>남는 사람은 뒤쪽 모둠에 1명씩 추가</b>됩니다.
+    (예: 16명, 모둠 3명 → 3·3·3·3·4명)<br>
+    · <b>차례대로</b>: A1·B1·C1, D1·E1·A2 … 번호 순서대로 배정. 2라운드부터는 순서를
+    한 칸씩 밀어 조합을 바꿉니다.<br>
+    · <b>무작위</b>: 같은 팀끼리는 같은 모둠에 안 들어가도록, 이전 라운드에서 만난
+    사람과는 최대한 다시 안 만나도록 무작위 배정합니다.<br>
+    · 다만 라운드가 많아지거나 인원이 적으면 이전에 만난 사람과 다시 만날 수 있습니다.
+  </div>
+</div>
+
+<!-- 1.5 이름 입력 -->
+<div class="card">
+  <h2>팀원 이름 입력 <span style="font-size:25px;font-weight:400;color:#64748b">(비워두면 A1, B2 같은 번호로 표시)</span></h2>
+  <div class="name-teams" id="nameInputs"></div>
+</div>
+
+<!-- 2. 대진표 -->
+<div class="card hidden" id="bracketCard">
+  <h2>대진표</h2>
+  <p class="hint">각 모둠에서 게임이 끝나면 <b>승자를 클릭</b>하세요. (다시 클릭하면 취소)</p>
+  <div id="bracket"></div>
+</div>
+
+<!-- 3. 집계 -->
+<div class="card hidden" id="scoreCard">
+  <h2>팀 점수 집계</h2>
+  <table>
+    <thead><tr><th>순위</th><th>팀</th><th>합계 점수</th></tr></thead>
+    <tbody id="scoreBody"></tbody>
+  </table>
+</div>
+
+<script>
+const TEAM_LABELS = ['A','B','C','D','E','F','G','H','I','J'];
+let winners = {};    // key: "라운드-모둠" → 승자 코드 (예: "B2")
+let cfg = {};
+let names = {};      // key: "A1" → 이름
+let roundsData = []; // roundsData[라운드][모둠] = 선수 코드 배열
+
+function toggleInfo() {
+  document.getElementById('infoBox').classList.toggle('show');
+}
+
+// 팀 수·인원 변경 시 이름 입력칸 다시 그리기 (입력한 이름은 유지)
+function renderNameInputs() {
+  const m = parseInt(document.getElementById('teamCount').value) || 0;
+  const n = parseInt(document.getElementById('memberCount').value) || 0;
+  const el = document.getElementById('nameInputs');
+  el.innerHTML = '';
+  for (let t = 0; t < Math.min(m, 10); t++) {
+    const div = document.createElement('div');
+    div.className = 'name-team';
+    div.innerHTML = '<div class="name-team-title">' + TEAM_LABELS[t] + '팀</div>';
+    for (let i = 1; i <= Math.min(n, 10); i++) {
+      const code = TEAM_LABELS[t] + i;
+      const row = document.createElement('div');
+      row.className = 'name-row';
+      const inp = document.createElement('input');
+      inp.value = names[code] || '';
+      inp.placeholder = '이름';
+      inp.oninput = () => {
+        names[code] = inp.value.trim();
+        if (roundsData.length) renderBracket();
+      };
+      row.innerHTML = '<span>' + code + ':</span>';
+      row.appendChild(inp);
+      div.appendChild(row);
+    }
+    el.appendChild(div);
+  }
+}
+
+function displayName(code) {
+  return names[code] ? code + ' ' + names[code] : code;
+}
+
+function teamOf(code) {
+  return TEAM_LABELS.indexOf(code[0]);
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 모둠별 정원 계산: 남는 인원은 뒤쪽 모둠에 1명씩 추가
+function groupSizes(total, k) {
+  const numGroups = Math.floor(total / k);
+  const sizes = new Array(numGroups).fill(k);
+  const rem = total % k;
+  for (let j = 0; j < rem; j++) sizes[numGroups - 1 - j]++;
+  return sizes;
+}
+
+// 차례대로 배정: 1라운드 = A1·B1·C1 순서, 2라운드부터 순서를 밀어서 섞기
+function buildRoundsSeq() {
+  const { m, n, r, k } = cfg;
+  const sizes = groupSizes(m * n, k);
+  roundsData = [];
+  for (let round = 0; round < r; round++) {
+    const seq = [];
+    for (let i = 0; i < n; i++)                       // 블록별로
+      for (let t = 0; t < m; t++)                     // 팀마다 번호를 라운드×팀순서만큼 밀기
+        seq.push(TEAM_LABELS[t] + (((i + t * round) % n) + 1));
+    const groups = [];
+    let pos = 0;
+    for (const size of sizes) {
+      groups.push(seq.slice(pos, pos + size));
+      pos += size;
+    }
+    roundsData.push(groups);
+  }
+}
+
+// 무작위 배정: 같은 팀 금지(최우선) + 이전에 만난 사람 회피(차선)
+function buildRoundsRandom() {
+  const { m, n, r, k } = cfg;
+  const players = [];
+  for (let t = 0; t < m; t++)
+    for (let i = 1; i <= n; i++)
+      players.push(TEAM_LABELS[t] + i);
+
+  const sizes = groupSizes(players.length, k);
+  const numGroups = sizes.length;
+
+  const met = {}; // "A1|B2" → true (이미 같은 모둠이었던 쌍)
+  const pairKey = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+
+  roundsData = [];
+  for (let round = 0; round < r; round++) {
+    let best = null;
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const order = shuffle(players);
+      const groups = sizes.map(() => []);
+      let penalty = 0;
+      for (const p of order) {
+        let bestG = -1, bestCost = Infinity;
+        for (let g = 0; g < numGroups; g++) {
+          if (groups[g].length >= sizes[g]) continue;
+          let cost = 0;
+          for (const q of groups[g]) {
+            if (teamOf(q) === teamOf(p)) cost += 1000; // 같은 팀
+            if (met[pairKey(p, q)]) cost += 1;          // 재회
+          }
+          if (cost < bestCost) { bestCost = cost; bestG = g; }
+        }
+        groups[bestG].push(p);
+        penalty += bestCost;
+      }
+      if (!best || penalty < best.penalty) best = { groups, penalty };
+      if (penalty === 0) break;
+    }
+    roundsData.push(best.groups);
+    for (const g of best.groups)
+      for (let i = 0; i < g.length; i++)
+        for (let j = i + 1; j < g.length; j++)
+          met[pairKey(g[i], g[j])] = true;
+  }
+}
+
+function generate() {
+  const m = parseInt(document.getElementById('teamCount').value);
+  const n = parseInt(document.getElementById('memberCount').value);
+  const k = parseInt(document.getElementById('groupSize').value);
+  const r = parseInt(document.getElementById('roundCount').value);
+  const score = parseInt(document.getElementById('winScore').value);
+
+  if (!m || !n || !k || !r || !score || m < 2 || n < 2 || k < 2 || r < 1 || score < 1) {
+    alert('모든 값을 올바르게 입력해주세요.'); return;
+  }
+  if (m > 10) { alert('팀 수는 최대 10팀까지 가능합니다.'); return; }
+  if (m * n < k) {
+    alert('모둠 인원(' + k + ')이 총 인원(' + (m * n) + ')보다 많습니다.'); return;
+  }
+
+  cfg = { m, n, r, k, score };
+  winners = {};
+  if (document.getElementById('assignMode').value === 'seq') buildRoundsSeq();
+  else buildRoundsRandom();
+  renderBracket();
+  renderScores();
+  document.getElementById('bracketCard').classList.remove('hidden');
+  document.getElementById('scoreCard').classList.remove('hidden');
+}
+
+function renderBracket() {
+  const el = document.getElementById('bracket');
+  el.innerHTML = '';
+  roundsData.forEach((groups, rIdx) => {
+    const rDiv = document.createElement('div');
+    rDiv.className = 'round';
+    rDiv.innerHTML = '<div class="round-title">라운드 ' + (rIdx + 1) + '</div>';
+    const gWrap = document.createElement('div');
+    gWrap.className = 'groups';
+    groups.forEach((group, gIdx) => {
+      const gDiv = document.createElement('div');
+      gDiv.className = 'group';
+      gDiv.innerHTML = '<div class="group-name">모둠 ' + (gIdx + 1) + '</div>';
+      const key = (rIdx + 1) + '-' + gIdx;
+      for (const code of group) {
+        const btn = document.createElement('button');
+        btn.className = 'member';
+        btn.textContent = displayName(code);
+        if (winners[key] === code) btn.classList.add('winner');
+        btn.onclick = () => {
+          winners[key] = (winners[key] === code) ? undefined : code;
+          renderBracket();
+          renderScores();
+        };
+        gDiv.appendChild(btn);
+      }
+      gWrap.appendChild(gDiv);
+    });
+    rDiv.appendChild(gWrap);
+    el.appendChild(rDiv);
+  });
+}
+
+function renderScores() {
+  const totals = new Array(cfg.m).fill(0);
+  for (const key in winners) {
+    if (winners[key] !== undefined) totals[teamOf(winners[key])] += cfg.score;
+  }
+  const rows = totals.map((s, i) => ({ team: TEAM_LABELS[i] + '팀', s }))
+                     .sort((x, y) => y.s - x.s);
+  const max = rows[0].s;
+  document.getElementById('scoreBody').innerHTML = rows.map((row, i) =>
+    '<tr class="' + (row.s === max && max > 0 ? 'leader' : '') + '">' +
+    '<td>' + (i + 1) + '</td><td>' + row.team + '</td><td>' + row.s + '</td></tr>'
+  ).join('');
+}
+
+document.getElementById('teamCount').addEventListener('input', renderNameInputs);
+document.getElementById('memberCount').addEventListener('input', renderNameInputs);
+renderNameInputs();
+</script>
+</body>
+</html>
